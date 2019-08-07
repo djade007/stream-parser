@@ -17,6 +17,9 @@ class CSVParser implements StreamParserInterface
 {
 	protected $reader, $source, $headers, $currentLine;
 
+	protected $trials = 0;
+	protected $max_trials = 5;
+
 	public static $delimiters = [",", ";"];
 	public static $skipsEmptyLines = true;
 
@@ -55,7 +58,7 @@ class CSVParser implements StreamParserInterface
 	}
 
 	private function read(): bool{
-		$this->currentLine = new Collection(fgetcsv($this->reader));
+		$this->currentLine = new Collection($this->getCSV($this->reader));
 
 		//EOF detection
 		return $this->currentLine->first() !== false;
@@ -112,4 +115,19 @@ class CSVParser implements StreamParserInterface
 			}
 		});
 	}
+
+    private function getCSV($reader)
+    {
+        try {
+            return fgetcsv($reader);
+        } catch (\ErrorException $e) {
+            if($this->trials > $this->max_trials) {
+                throw $e;
+            } else {
+                sleep($this->trials * 1);
+                $this->trials++;
+                return $this->getCSV($reader);
+            }
+        }
+    }
 }
